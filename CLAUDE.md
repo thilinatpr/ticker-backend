@@ -1,11 +1,13 @@
+Here’s a tailored `CLAUDE.md` file for your backend Express server hosted on Vercel that serves API endpoints for stock ticker dividend history. It sets clear project context and guidelines for Claude Code or any AI assistant you use.
+
+````markdown
 # CLAUDE.md — Express Backend for Stock Ticker Dividend History API
 
 ## Project Overview
 
 This project is a backend Express.js API server deployed on Vercel. It provides RESTful endpoints to fetch dividend history data for stock tickers.
 
-**Key Details:**
-- **Purpose:** Serve clean, reliable dividend history data via API for client apps or dashboards
+- **Purpose:** Serve clean, reliable dividend history data via API for client apps or dashboards.
 - **Hosting:** Vercel serverless functions (Edge or Serverless Runtime)
 - **Language:** JavaScript (Node.js 18+)
 - **Framework:** Express.js (minimal middleware, optimized for serverless)
@@ -16,17 +18,11 @@ This project is a backend Express.js API server deployed on Vercel. It provides 
 
 ## Project Structure
 
-```
-ticker-backend/
-├── api/              # Vercel API routes implemented as Express endpoints
-├── lib/              # Utility functions for fetching and processing dividend data
-├── middleware/       # Express middleware (logging, error handling, etc.)
-├── config/           # Environment-based configuration (API keys, cache TTL, etc.)
-├── tests/            # Unit and integration tests for API endpoints and logic
-├── package.json      # Dependencies and scripts
-├── vercel.json       # Vercel deployment configuration
-└── CLAUDE.md         # This file - project context for AI assistants
-```
+- `/api` — Vercel API routes implemented as Express endpoints  
+- `/lib` — Utility functions for fetching and processing dividend data  
+- `/middleware` — Express middleware (e.g., logging, error handling)  
+- `/config` — Environment-based configuration (API keys, cache TTL, etc.)  
+- `/tests` — Unit and integration tests for API endpoints and logic
 
 ---
 
@@ -34,13 +30,11 @@ ticker-backend/
 
 ### GET `/api/dividends/:ticker`
 
-**Description:** Returns the dividend history for a given stock ticker symbol (e.g., AAPL, MSFT)
-
-**Query Parameters:**
-- `startDate` (optional, ISO date string) — filter dividends from this date
-- `endDate` (optional, ISO date string) — filter dividends until this date
-
-**Response:**
+- **Description:** Returns the dividend history for a given stock ticker symbol (e.g., AAPL, MSFT)  
+- **Query params:**  
+  - `startDate` (optional, ISO date string) — filter dividends from this date  
+  - `endDate` (optional, ISO date string) — filter dividends until this date  
+- **Response:**  
 ```json
 {
   "ticker": "AAPL",
@@ -53,94 +47,65 @@ ticker-backend/
       "currency": "USD",
       "frequency": 4,
       "type": "Cash"
-    }
+    },
+    ...
   ]
 }
-```
+````
 
-**Error Responses:**
-- `404` - Ticker not found
-- `400` - Invalid query parameters
-- `500` - Internal server error
+* **Errors:**
+
+  * `404` if ticker not found
+  * `400` if invalid query params
+  * `500` for internal server errors
 
 ---
 
 ## Coding Guidelines
 
-- **ES Modules:** Use import/export for consistency
-- **Async/Await:** Write clean, readable async/await code for API calls
-- **Documentation:** Include JSDoc comments for all public functions and endpoints
-- **Error Handling:** Handle errors explicitly and return meaningful messages
-- **REST Conventions:** Follow REST conventions for HTTP methods and status codes
-- **Pure Functions:** Avoid side effects in utility functions; keep them pure where possible
-- **Security:** Use environment variables for secrets and keys; do NOT hardcode
-- **Testing:** Write unit tests with Jest or preferred testing framework
-- **Code Style:** Follow consistent formatting and naming conventions
+* Use ES modules (import/export) for consistency
+* Write clean, readable async/await code for API calls
+* Include JSDoc comments for all public functions and endpoints
+* Handle errors explicitly and return meaningful messages
+* Follow REST conventions for HTTP methods and status codes
+* Avoid side effects in utility functions; keep them pure where possible
+* Use environment variables for secrets and keys; do NOT hardcode
+* Write unit tests with Jest or preferred testing framework
 
 ---
 
 ## Deployment Notes
 
-- **Environment Variables:** Ensure all API keys and secrets are set in Vercel dashboard
-- **Function Limits:** Use Vercel's recommended serverless function limits (max 10s runtime, memory limits)
-- **Performance:** Optimize API responses for minimal payload size
-- **Caching:** Cache dividend data where possible to reduce external API calls and latency
-- **Monitoring:** Set up logging and error tracking for production issues
+* Ensure all environment variables (API keys, secrets) are set in Vercel dashboard
+* Use Vercel's recommended serverless function limits (max 10s runtime, memory limits)
+* Optimize API responses for minimal payload size
+* Cache dividend data where possible to reduce external API calls and latency
 
 ---
 
-## Development Commands
+## Important Commands
 
-```bash
-npm run dev          # Start local development server with hot reload
-npm run build        # Build for production (if applicable)
-npm test             # Run test suite
-npm run lint         # Run linter
-npm run type-check   # Run TypeScript type checking (if using TS)
-vercel dev           # Run Vercel development environment locally
-vercel deploy        # Deploy latest version to Vercel
-```
+* `npm run dev` — start local dev server with hot reload
+* `npm run build` — build for production (if applicable)
+* `npm test` — run tests
+* `vercel deploy` — deploy latest version to Vercel
 
 ---
 
 ## Known Limitations & TODOs
 
-- **Rate Limiting:** External stock APIs may require retries or backoff strategies
-- **Pagination:** Support for dividend lists pagination not yet implemented
-- **Caching:** Consider adding internal caching or DB layer for improved performance
-- **Error Recovery:** Implement more robust error recovery and fallback mechanisms
-- **Data Validation:** Add comprehensive input validation for all endpoints
+* Rate limits from external stock APIs may require retries or backoff
+* Pagination support for dividend lists is currently not implemented
+* Add integration with internal caching or DB layer for improved performance
 
 ---
 
-## Environment Variables
+## Contact / Maintainers
 
-Required environment variables for the application:
-
-```bash
-# External API Configuration
-ALPHA_VANTAGE_API_KEY=your_alpha_vantage_key
-TIINGO_API_KEY=your_tiingo_key
-IEX_CLOUD_API_KEY=your_iex_cloud_key
-
-# Application Configuration
-NODE_ENV=production
-LOG_LEVEL=info
-CACHE_TTL=3600
-
-# Optional: Database/Redis for caching
-DATABASE_URL=your_database_url
-REDIS_URL=your_redis_url
-```
+* Maintained by \[Your Name or Team]
+* Contact: [your.email@example.com](mailto:your.email@example.com)
 
 ---
 
-## AI Assistant Guidelines
+# End of CLAUDE.md
 
-When working on this project:
-1. **Always check existing code patterns** before implementing new features
-2. **Follow the project structure** outlined above
-3. **Test API endpoints** after making changes
-4. **Update this CLAUDE.md** if you add new endpoints or change the architecture
-5. **Use environment variables** for any external service configurations
-6. **Prioritize performance** due to Vercel's serverless environment constraints
