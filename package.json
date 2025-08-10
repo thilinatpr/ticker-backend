@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "vercel dev",
-    "build": "echo 'No build step required'",
+    "build": "mkdir -p public && echo '{\"success\": true}' > public/build.json",
     "test": "echo 'No tests specified yet'",
     "start": "node index.js"
   },
