@@ -4,7 +4,7 @@
  * Requires: X-API-Key header
  */
 
-const { requireApiKey } = require('../../lib/auth');
+import { requireApiKey } from '../../lib/auth.js';
 
 const mockDividendData = {
   'AAPL': [

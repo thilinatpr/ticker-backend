@@ -5,7 +5,7 @@
  * Requires master key for authentication
  */
 
-const { createApiKey, listApiKeys } = require('../lib/auth');
+import { createApiKey, listApiKeys } from '../lib/auth.js';
 
 // Master key for API key management (in production, use environment variable)
 const MASTER_KEY = process.env.MASTER_API_KEY || 'master_dev_key_12345';
