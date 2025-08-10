@@ -1,7 +1,10 @@
 /**
  * API endpoint for fetching dividend history by ticker symbol
  * GET /api/dividends/:ticker
+ * Requires: X-API-Key header
  */
+
+const { requireApiKey } = require('../../lib/auth');
 
 const mockDividendData = {
   'AAPL': [
@@ -37,7 +40,7 @@ const mockDividendData = {
   ]
 };
 
-export default function handler(req, res) {
+function handler(req, res) {
   const { ticker } = req.query;
   const { startDate, endDate } = req.query;
 
@@ -77,6 +80,9 @@ export default function handler(req, res) {
 
   res.status(200).json({
     ticker: tickerUpper,
-    dividends: filteredDividends
+    dividends: filteredDividends,
+    apiKeyName: req.apiKeyData?.name || 'Unknown'
   });
 }
+
+export default requireApiKey(handler);

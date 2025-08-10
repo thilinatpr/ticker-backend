@@ -1,15 +1,39 @@
 # Ticker Backend API
 
-A simple Express.js API deployed on Vercel for fetching stock dividend history data.
+A secure Express.js API deployed on Vercel for fetching stock dividend history data with API key authentication.
 
 ## Features
 
-- **Health Check**: `GET /api/health` - Service status and info
-- **Dividend History**: `GET /api/dividends/:ticker` - Get dividend data for a stock ticker
+- **🔐 API Key Authentication** - Secure access with rate limiting
+- **📈 Dividend History** - Get dividend data for stock tickers  
+- **⚡ Rate Limiting** - Built-in request throttling per API key
+- **🔍 Health Monitoring** - Service status endpoint
+- **🛠️ API Key Management** - Admin endpoints for key management
 
-## API Usage
+## Authentication
 
-### Health Check
+All endpoints (except health check) require an API key. Include it in your requests:
+
+**Header Method:**
+```bash
+X-API-Key: your_api_key_here
+```
+
+**Bearer Token Method:**
+```bash
+Authorization: Bearer your_api_key_here
+```
+
+### Demo API Keys
+
+For testing purposes, you can use these demo keys:
+
+- **Demo Key**: `tk_demo_key_12345` (100 requests/hour)
+- **Test Key**: `tk_test_67890` (50 requests/hour)
+
+## API Endpoints
+
+### Health Check (No Auth Required)
 ```bash
 GET /api/health
 ```
@@ -24,10 +48,13 @@ Response:
 }
 ```
 
-### Get Dividend History
+### Get Dividend History (Auth Required)
 ```bash
-GET /api/dividends/AAPL
-GET /api/dividends/AAPL?startDate=2024-01-01&endDate=2024-12-31
+curl -H "X-API-Key: tk_demo_key_12345" \
+  "https://ticker-backend-nu.vercel.app/api/dividends/AAPL"
+
+curl -H "X-API-Key: tk_demo_key_12345" \
+  "https://ticker-backend-nu.vercel.app/api/dividends/AAPL?startDate=2024-01-01&endDate=2024-12-31"
 ```
 
 Response:
@@ -44,14 +71,63 @@ Response:
       "frequency": 4,
       "type": "Cash"
     }
-  ]
+  ],
+  "apiKeyName": "Demo Key"
 }
+```
+
+### API Key Management (Admin Only)
+
+**List API Keys:**
+```bash
+curl -H "X-Master-Key: master_dev_key_12345" \
+  "https://ticker-backend-nu.vercel.app/api/keys"
+```
+
+**Create New API Key:**
+```bash
+curl -X POST \
+  -H "X-Master-Key: master_dev_key_12345" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "My App", "rateLimit": 200}' \
+  "https://ticker-backend-nu.vercel.app/api/keys"
 ```
 
 ## Available Tickers (MVP)
 
 - `AAPL` - Apple Inc.
 - `MSFT` - Microsoft Corporation
+
+## Rate Limiting
+
+Each API key has a rate limit (requests per hour):
+- Demo keys: 50-100 requests/hour
+- Custom keys: 1-10,000 requests/hour (configurable)
+
+Rate limit headers are included in responses:
+```
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 95
+```
+
+## Error Responses
+
+**401 Unauthorized** - Missing or invalid API key:
+```json
+{
+  "error": "API key required",
+  "message": "Please provide an API key in the X-API-Key header"
+}
+```
+
+**429 Rate Limit Exceeded:**
+```json
+{
+  "error": "Rate limit exceeded",
+  "limit": 100,
+  "resetTime": "2024-01-01T01:00:00.000Z"
+}
+```
 
 ## Local Development
 
