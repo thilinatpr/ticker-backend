@@ -1,0 +1,21 @@
+{
+  "name": "ticker-backend",
+  "version": "1.0.0",
+  "description": "Express backend for stock ticker dividend history API",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vercel dev",
+    "build": "echo 'No build step required'",
+    "test": "echo 'No tests specified yet'",
+    "start": "node index.js"
+  },
+  "keywords": ["stocks", "dividends", "api", "express", "vercel"],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
