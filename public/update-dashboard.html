@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dividend Update Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .info-section {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .info-row:last-child {
+            margin-bottom: 0;
+        }
+        
+        .label {
+            font-weight: 600;
+            color: #555;
+        }
+        
+        .value {
+            color: #333;
+            font-family: 'Monaco', 'Menlo', monospace;
+        }
+        
+        .api-key {
+            background: #fff3cd;
+            color: #856404;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        
+        .progress-section {
+            margin: 20px 0;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #28a745, #20c997);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
+        .progress-text {
+            text-align: center;
+            margin-top: 10px;
+            font-weight: 600;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .stat-card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 16px;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #5a6fd8;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #545b62;
+        }
+        
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .log-section {
+            margin-top: 30px;
+        }
+        
+        .log-container {
+            background: #1e1e1e;
+            color: #f8f8f2;
+            border-radius: 8px;
+            padding: 20px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 14px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 2px 0;
+        }
+        
+        .log-timestamp {
+            color: #6272a4;
+        }
+        
+        .log-success {
+            color: #50fa7b;
+        }
+        
+        .log-error {
+            color: #ff5555;
+        }
+        
+        .log-info {
+            color: #8be9fd;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .error-banner {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .success-banner {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            border: 1px solid #c3e6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📈 Dividend Update Dashboard</h1>
+            <p>Automated dividend data synchronization for your portfolio</p>
+        </div>
+        
+        <div class="content">
+            <!-- Session Info -->
+            <div class="info-section">
+                <div class="info-row">
+                    <span class="label">API Key:</span>
+                    <span class="value api-key" id="apiKeyDisplay">Loading...</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Total Tickers:</span>
+                    <span class="value" id="totalTickers">0</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Update Strategy:</span>
+                    <span class="value" id="updateStrategy">Analyzing...</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Last Updated:</span>
+                    <span class="value" id="lastUpdated">Never</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Estimated Duration:</span>
+                    <span class="value" id="estimatedDuration">Calculating...</span>
+                </div>
+            </div>
+            
+            <!-- Progress Section -->
+            <div class="progress-section">
+                <h3>Update Progress</h3>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="progress-text" id="progressText">Ready to begin update</div>
+            </div>
+            
+            <!-- Statistics -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="processedCount">0</div>
+                    <div class="stat-label">Processed</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="successCount">0</div>
+                    <div class="stat-label">Successful</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="errorCount">0</div>
+                    <div class="stat-label">Errors</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="etaDisplay">--</div>
+                    <div class="stat-label">ETA</div>
+                </div>
+            </div>
+            
+            <!-- Controls -->
+            <div class="controls">
+                <button class="btn btn-primary" id="startBtn" onclick="startUpdate()">
+                    🚀 Start Update
+                </button>
+                <button class="btn btn-secondary" id="pauseBtn" onclick="pauseUpdate()" disabled>
+                    ⏸️ Pause
+                </button>
+                <button class="btn btn-danger" id="stopBtn" onclick="stopUpdate()" disabled>
+                    ⏹️ Stop
+                </button>
+                <button class="btn btn-secondary" onclick="clearLogs()">
+                    🗑️ Clear Logs
+                </button>
+            </div>
+            
+            <!-- Status Messages -->
+            <div id="statusMessages"></div>
+            
+            <!-- Activity Log -->
+            <div class="log-section">
+                <h3>Activity Log</h3>
+                <div class="log-container" id="logContainer">
+                    <div class="log-entry">
+                        <span class="log-timestamp">[System]</span>
+                        <span class="log-info">Dashboard initialized. Waiting for parameters...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class DividendUpdater {
+            constructor() {
+                this.tickers = [];
+                this.apiKey = '';
+                this.lastUpdated = null;
+                this.baseUrl = window.location.origin;
+                this.currentIndex = 0;
+                this.successCount = 0;
+                this.errorCount = 0;
+                this.isRunning = false;
+                this.isPaused = false;
+                this.startTime = null;
+                this.jobId = null; // Background job ID
+                this.RATE_LIMIT_DELAY = 12000; // 12 seconds = 5 requests/minute
+                
+                this.initializeFromUrl();
+                this.setupEventHandlers();
+            }
+            
+            initializeFromUrl() {
+                const params = new URLSearchParams(window.location.search);
+                
+                // Parse tickers (JSON array)
+                const tickersParam = params.get('tickers');
+                if (tickersParam) {
+                    try {
+                        this.tickers = JSON.parse(decodeURIComponent(tickersParam));
+                    } catch (e) {
+                        this.logError('Failed to parse tickers from URL');
+                        this.tickers = [];
+                    }
+                }
+                
+                // Get API key (default to demo key)
+                this.apiKey = params.get('apiKey') || 'tk_demo_key_12345';
+                
+                // Get last updated timestamp
+                this.lastUpdated = params.get('lastUpdated');
+                
+                this.updateDisplay();
+                this.analyzeUpdateStrategy();
+            }
+            
+            setupEventHandlers() {
+                // Handle page close/refresh
+                window.addEventListener('beforeunload', (e) => {
+                    if (this.isRunning) {
+                        e.preventDefault();
+                        e.returnValue = 'Update in progress. Are you sure you want to leave?';
+                    }
+                });
+            }
+            
+            async analyzeUpdateStrategy() {
+                this.log('Analyzing update requirements...', 'info');
+                
+                if (!this.lastUpdated) {
+                    // Full historical update
+                    const strategy = 'FULL HISTORICAL';
+                    const duration = this.estimateDuration(this.tickers.length);
+                    
+                    document.getElementById('updateStrategy').textContent = strategy;
+                    document.getElementById('estimatedDuration').textContent = duration;
+                    document.getElementById('lastUpdated').textContent = 'Never';
+                    
+                    this.log(`Strategy: ${strategy} - All ${this.tickers.length} tickers`, 'info');
+                } else {
+                    // Check for pending updates
+                    this.log('Checking which tickers need updates...', 'info');
+                    const pendingTickers = await this.checkPendingUpdates();
+                    
+                    const strategy = pendingTickers.length > 0 ? 'INCREMENTAL' : 'UP TO DATE';
+                    const duration = this.estimateDuration(pendingTickers.length);
+                    
+                    document.getElementById('updateStrategy').textContent = strategy;
+                    document.getElementById('estimatedDuration').textContent = duration;
+                    document.getElementById('lastUpdated').textContent = new Date(this.lastUpdated).toLocaleString();
+                    
+                    if (pendingTickers.length === 0) {
+                        this.showSuccess('All tickers are up to date!');
+                        document.getElementById('startBtn').disabled = true;
+                    } else {
+                        this.tickers = pendingTickers; // Only update pending ones
+                        this.log(`Strategy: ${strategy} - ${pendingTickers.length} tickers need updates`, 'info');
+                    }
+                }
+                
+                this.updateDisplay();
+            }
+            
+            async checkPendingUpdates() {
+                const pendingTickers = [];
+                const batchSize = 10; // Check multiple tickers in parallel
+                
+                for (let i = 0; i < this.tickers.length; i += batchSize) {
+                    const batch = this.tickers.slice(i, i + batchSize);
+                    const promises = batch.map(ticker => this.checkTickerUpdate(ticker));
+                    const results = await Promise.allSettled(promises);
+                    
+                    results.forEach((result, index) => {
+                        if (result.status === 'fulfilled' && result.value.needsUpdate) {
+                            pendingTickers.push(batch[index]);
+                        }
+                    });
+                    
+                    // Update progress
+                    const checkedCount = Math.min(i + batchSize, this.tickers.length);
+                    this.log(`Checked ${checkedCount}/${this.tickers.length} tickers for updates`, 'info');
+                }
+                
+                return pendingTickers;
+            }
+            
+            async checkTickerUpdate(ticker) {
+                try {
+                    const url = `${this.baseUrl}/api/dividends/${ticker}?checkOnly=true&lastUpdated=${this.lastUpdated}`;
+                    const response = await fetch(url, {
+                        headers: { 'X-API-Key': this.apiKey }
+                    });
+                    
+                    if (!response.ok) {
+                        return { needsUpdate: true }; // Assume needs update if check fails
+                    }
+                    
+                    const data = await response.json();
+                    return data;
+                } catch (error) {
+                    return { needsUpdate: true }; // Assume needs update if check fails
+                }
+            }
+            
+            updateDisplay() {
+                document.getElementById('apiKeyDisplay').textContent = this.maskApiKey(this.apiKey);
+                document.getElementById('totalTickers').textContent = this.tickers.length;
+                document.getElementById('processedCount').textContent = this.currentIndex;
+                document.getElementById('successCount').textContent = this.successCount;
+                document.getElementById('errorCount').textContent = this.errorCount;
+            }
+            
+            maskApiKey(apiKey) {
+                if (apiKey.length <= 8) return apiKey;
+                return apiKey.substring(0, 6) + '***' + apiKey.substring(apiKey.length - 4);
+            }
+            
+            estimateDuration(tickerCount) {
+                if (tickerCount === 0) return 'No updates needed';
+                
+                const minutes = Math.ceil(tickerCount / 5); // 5 requests per minute
+                const hours = Math.floor(minutes / 60);
+                const remainingMinutes = minutes % 60;
+                
+                if (hours > 0) {
+                    return `${hours}h ${remainingMinutes}m`;
+                } else {
+                    return `${minutes}m`;
+                }
+            }
+            
+            async startUpdate() {
+                if (this.tickers.length === 0) {
+                    this.showError('No tickers to update');
+                    return;
+                }
+                
+                this.isRunning = true;
+                this.isPaused = false;
+                this.startTime = new Date();
+                this.currentIndex = 0;
+                this.successCount = 0;
+                this.errorCount = 0;
+                
+                document.getElementById('startBtn').disabled = true;
+                document.getElementById('pauseBtn').disabled = false;
+                document.getElementById('stopBtn').disabled = false;
+                
+                this.log(`🚀 Starting update for ${this.tickers.length} tickers`, 'success');
+                this.log(`Using job-based processing via /api/update-tickers`, 'info');
+                
+                await this.submitBulkUpdateJob();
+            }
+            
+            async submitBulkUpdateJob() {
+                try {
+                    this.log('Submitting bulk update job to backend...', 'info');
+                    
+                    const response = await fetch(`${this.baseUrl}/api/update-tickers`, {
+                        method: 'POST',
+                        headers: {
+                            'X-API-Key': this.apiKey,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            tickers: this.tickers,
+                            priority: 1,
+                            force: true
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        const error = await response.json();
+                        throw new Error(error.error || `HTTP ${response.status}`);
+                    }
+                    
+                    const jobData = await response.json();
+                    this.jobId = jobData.jobId;
+                    
+                    this.log(`✅ Job ${this.jobId} created successfully`, 'success');
+                    this.log(`Status URL: ${jobData.statusUrl}`, 'info');
+                    
+                    // Start polling job status
+                    await this.pollJobStatus();
+                    
+                } catch (error) {
+                    this.errorCount = this.tickers.length;
+                    this.log(`❌ Failed to submit job: ${error.message}`, 'error');
+                    this.showError(`Failed to submit update job: ${error.message}`);
+                    this.stopUpdate();
+                }
+            }
+            
+            async pollJobStatus() {
+                const pollInterval = 5000; // 5 seconds
+                this.log(`Starting job status polling (every ${pollInterval/1000}s)...`, 'info');
+                
+                while (this.isRunning && this.jobId) {
+                    if (this.isPaused) {
+                        this.log('⏸️ Update paused - job continues in background', 'info');
+                        return;
+                    }
+                    
+                    try {
+                        const response = await fetch(`${this.baseUrl}/api/job-status/${this.jobId}`, {
+                            headers: { 'X-API-Key': this.apiKey }
+                        });
+                        
+                        if (!response.ok) {
+                            throw new Error(`Status check failed: HTTP ${response.status}`);
+                        }
+                        
+                        const jobStatus = await response.json();
+                        this.updateFromJobStatus(jobStatus);
+                        
+                        // Check if job is complete
+                        if (jobStatus.status === 'completed' || jobStatus.status === 'failed') {
+                            this.completeUpdate();
+                            break;
+                        }
+                        
+                        await this.delay(pollInterval);
+                        
+                    } catch (error) {
+                        this.log(`⚠️ Status check error: ${error.message}`, 'error');
+                        await this.delay(pollInterval * 2); // Wait longer on error
+                    }
+                }
+            }
+            
+            updateFromJobStatus(jobStatus) {
+                this.currentIndex = jobStatus.processedTickers || 0;
+                this.successCount = (jobStatus.processedTickers || 0) - (jobStatus.failedTickers || 0);
+                this.errorCount = jobStatus.failedTickers || 0;
+                
+                this.updateProgress();
+                this.updateDisplay();
+                
+                // Log status updates
+                if (jobStatus.status === 'processing') {
+                    this.log(`📊 Progress: ${this.currentIndex}/${this.tickers.length} processed`, 'info');
+                } else if (jobStatus.status === 'completed') {
+                    this.log(`🎉 Job completed! ${this.successCount} successful, ${this.errorCount} errors`, 'success');
+                } else if (jobStatus.status === 'failed') {
+                    this.log(`❌ Job failed: ${jobStatus.errorMessage || 'Unknown error'}`, 'error');
+                }
+            }
+            
+            
+            getDateRange() {
+                if (!this.lastUpdated) {
+                    // Full historical: Current year + next 3 months
+                    const startDate = new Date(new Date().getFullYear(), 0, 1);
+                    const endDate = new Date();
+                    endDate.setMonth(endDate.getMonth() + 3);
+                    
+                    return {
+                        startDate: startDate.toISOString().split('T')[0],
+                        endDate: endDate.toISOString().split('T')[0]
+                    };
+                } else {
+                    // Incremental: Since last update
+                    const startDate = new Date(this.lastUpdated);
+                    const endDate = new Date();
+                    endDate.setMonth(endDate.getMonth() + 1);
+                    
+                    return {
+                        startDate: startDate.toISOString().split('T')[0],
+                        endDate: endDate.toISOString().split('T')[0]
+                    };
+                }
+            }
+            
+            updateProgress() {
+                const progress = (this.currentIndex / this.tickers.length) * 100;
+                document.getElementById('progressFill').style.width = `${progress}%`;
+                
+                const remaining = this.tickers.length - this.currentIndex;
+                const eta = this.calculateETA(remaining);
+                
+                document.getElementById('progressText').textContent = 
+                    `${this.currentIndex}/${this.tickers.length} processed (${Math.round(progress)}%)`;
+                document.getElementById('etaDisplay').textContent = eta;
+            }
+            
+            calculateETA(remainingTickers) {
+                if (!this.startTime || remainingTickers === 0) return '--';
+                
+                const elapsed = (new Date() - this.startTime) / 1000; // seconds
+                const processed = this.currentIndex;
+                
+                if (processed === 0) return '--';
+                
+                const avgTimePerTicker = elapsed / processed;
+                const etaSeconds = remainingTickers * avgTimePerTicker;
+                
+                const minutes = Math.floor(etaSeconds / 60);
+                const seconds = Math.floor(etaSeconds % 60);
+                
+                return `${minutes}m ${seconds}s`;
+            }
+            
+            completeUpdate() {
+                this.isRunning = false;
+                this.isPaused = false;
+                
+                document.getElementById('startBtn').disabled = false;
+                document.getElementById('pauseBtn').disabled = true;
+                document.getElementById('stopBtn').disabled = true;
+                
+                const duration = ((new Date() - this.startTime) / 1000 / 60).toFixed(1);
+                const successRate = ((this.successCount / this.tickers.length) * 100).toFixed(1);
+                
+                this.log(`🎉 Update completed in ${duration} minutes`, 'success');
+                this.log(`Success rate: ${successRate}% (${this.successCount}/${this.tickers.length})`, 'success');
+                
+                if (this.errorCount > 0) {
+                    this.showError(`Update completed with ${this.errorCount} errors. Check logs for details.`);
+                } else {
+                    this.showSuccess(`All ${this.successCount} tickers updated successfully!`);
+                }
+                
+                // Update last updated timestamp
+                const completedAt = new Date().toISOString();
+                this.lastUpdated = completedAt;
+                
+                // Update URL parameters to reflect completion
+                this.updateUrlParams();
+                
+                // Notify Google Sheets integration if available
+                this.notifyGoogleSheetsCompletion(completedAt);
+            }
+            
+            updateUrlParams() {
+                const url = new URL(window.location);
+                url.searchParams.set('lastUpdated', this.lastUpdated);
+                window.history.replaceState({}, '', url);
+            }
+            
+            notifyGoogleSheetsCompletion(completedAt) {
+                // Try to communicate completion back to Google Sheets
+                try {
+                    const message = {
+                        type: 'DIVIDEND_UPDATE_COMPLETE',
+                        timestamp: completedAt,
+                        tickers: this.tickers,
+                        successCount: this.successCount,
+                        errorCount: this.errorCount,
+                        jobId: this.jobId
+                    };
+                    
+                    // Use postMessage to communicate with parent window (Google Sheets)
+                    if (window.parent !== window) {
+                        window.parent.postMessage(message, '*');
+                        this.log('📤 Notified Google Sheets of completion', 'info');
+                    }
+                    
+                    // Also store in localStorage for the Google Apps Script to read
+                    localStorage.setItem('dividendUpdateResult', JSON.stringify(message));
+                    this.log('💾 Stored completion data for Google Apps Script', 'info');
+                    
+                } catch (error) {
+                    this.log(`⚠️ Failed to notify Google Sheets: ${error.message}`, 'error');
+                }
+            }
+            
+            pauseUpdate() {
+                this.isPaused = true;
+                document.getElementById('pauseBtn').disabled = true;
+                document.getElementById('startBtn').disabled = false;
+                document.getElementById('startBtn').textContent = '▶️ Resume';
+            }
+            
+            resumeUpdate() {
+                this.isPaused = false;
+                document.getElementById('startBtn').disabled = true;
+                document.getElementById('pauseBtn').disabled = false;
+                document.getElementById('startBtn').textContent = '🚀 Start Update';
+                this.processAllTickers();
+            }
+            
+            stopUpdate() {
+                this.isRunning = false;
+                this.isPaused = false;
+                
+                document.getElementById('startBtn').disabled = false;
+                document.getElementById('pauseBtn').disabled = true;
+                document.getElementById('stopBtn').disabled = true;
+                document.getElementById('startBtn').textContent = '🚀 Start Update';
+                
+                this.log('⏹️ Update stopped by user', 'info');
+            }
+            
+            delay(ms) {
+                return new Promise(resolve => setTimeout(resolve, ms));
+            }
+            
+            log(message, type = 'info') {
+                const logContainer = document.getElementById('logContainer');
+                const timestamp = new Date().toLocaleTimeString();
+                const entry = document.createElement('div');
+                entry.className = 'log-entry';
+                
+                entry.innerHTML = `
+                    <span class="log-timestamp">[${timestamp}]</span>
+                    <span class="log-${type}">${message}</span>
+                `;
+                
+                logContainer.appendChild(entry);
+                logContainer.scrollTop = logContainer.scrollHeight;
+            }
+            
+            showError(message) {
+                this.showMessage(message, 'error');
+            }
+            
+            showSuccess(message) {
+                this.showMessage(message, 'success');
+            }
+            
+            showMessage(message, type) {
+                const container = document.getElementById('statusMessages');
+                const banner = document.createElement('div');
+                banner.className = `${type}-banner`;
+                banner.textContent = message;
+                
+                // Clear existing messages
+                container.innerHTML = '';
+                container.appendChild(banner);
+                
+                // Auto-hide after 10 seconds
+                setTimeout(() => {
+                    if (banner.parentNode) {
+                        banner.parentNode.removeChild(banner);
+                    }
+                }, 10000);
+            }
+            
+            clearLogs() {
+                const logContainer = document.getElementById('logContainer');
+                logContainer.innerHTML = `
+                    <div class="log-entry">
+                        <span class="log-timestamp">[System]</span>
+                        <span class="log-info">Logs cleared</span>
+                    </div>
+                `;
+            }
+        }
+        
+        // Global functions for button handlers
+        let updater;
+        
+        function startUpdate() {
+            if (updater.isPaused) {
+                updater.resumeUpdate();
+            } else {
+                updater.startUpdate();
+            }
+        }
+        
+        function pauseUpdate() {
+            updater.pauseUpdate();
+        }
+        
+        function stopUpdate() {
+            updater.stopUpdate();
+        }
+        
+        function clearLogs() {
+            updater.clearLogs();
+        }
+        
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            updater = new DividendUpdater();
+        });
+    </script>
+</body>
+</html>

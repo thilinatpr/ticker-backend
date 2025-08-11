@@ -3,7 +3,13 @@
  * In production, Vercel handles routing through the /api directory
  */
 
-const express = require('express');
+import express from 'express';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
 const app = express();
 const port = process.env.PORT || 3000;
 
@@ -16,7 +22,10 @@ app.get('/', (req, res) => {
     version: '1.0.0',
     endpoints: {
       health: '/api/health',
-      dividends: '/api/dividends/:ticker'
+      dividends: '/api/dividends/:ticker',
+      updateTickers: '/api/update-tickers',
+      jobs: '/api/jobs',
+      processQueue: '/api/process-queue'
     }
   });
 });
@@ -27,15 +36,28 @@ app.get('/api/health', (req, res) => {
     status: 'ok',
     timestamp: new Date().toISOString(),
     service: 'ticker-backend',
-    version: '1.0.0'
+    version: '1.0.0',
+    features: [
+      'dividend-tracking',
+      'background-processing',
+      'rate-limiting',
+      'job-management'
+    ]
   });
 });
 
-if (require.main === module) {
+// For ES modules, check if this is the main module
+if (import.meta.url === `file://${process.argv[1]}`) {
   app.listen(port, () => {
-    console.log(`Server running on port ${port}`);
-    console.log(`Health check: http://localhost:${port}/api/health`);
+    console.log(`🚀 Ticker Backend API Server running on port ${port}`);
+    console.log(`📊 Health check: http://localhost:${port}/api/health`);
+    console.log(`📋 Available endpoints:`);
+    console.log(`   • GET  /api/health`);
+    console.log(`   • GET  /api/dividends/:ticker`);
+    console.log(`   • POST /api/update-tickers`);
+    console.log(`   • GET  /api/jobs`);
+    console.log(`   • POST /api/process-queue`);
   });
 }
 
-module.exports = app;
+export default app;

@@ -40,3 +40,8 @@ coverage/
 # Build outputs
 dist/
 build/
+
+# Apps Script
+appscript/.clasp.json
+appscript/node_modules/
+appscript/dist/

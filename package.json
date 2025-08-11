@@ -1,18 +1,34 @@
 {
   "name": "ticker-backend",
   "version": "1.0.0",
+  "type": "module",
   "description": "Express backend for stock ticker dividend history API",
   "main": "index.js",
   "scripts": {
     "dev": "vercel dev",
     "build": "mkdir -p public && echo '{\"success\": true}' > public/build.json",
     "test": "echo 'No tests specified yet'",
+    "test:endpoints": "node test-endpoints.js",
+    "test:core": "node test-core-functions.js",
+    "setup:enhanced": "node setup-enhanced-db.js",
+    "validate": "node validate-setup.js",
+    "test:db": "node test-db.js",
+    "setup:db": "node setup-db.js",
     "start": "node index.js"
   },
-  "keywords": ["stocks", "dividends", "api", "express", "vercel"],
+  "keywords": [
+    "stocks",
+    "dividends",
+    "api",
+    "express",
+    "vercel"
+  ],
   "author": "Your Name",
   "license": "MIT",
   "dependencies": {
+    "@supabase/supabase-js": "^2.54.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.1",
     "express": "^4.18.2"
   },
   "engines": {

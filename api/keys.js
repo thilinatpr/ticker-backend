@@ -6,6 +6,7 @@
  */
 
 import { createApiKey, listApiKeys } from '../lib/auth.js';
+import { setCorsHeaders } from '../middleware/cors.js';
 
 // Master key for API key management (in production, use environment variable)
 const MASTER_KEY = process.env.MASTER_API_KEY || 'master_dev_key_12345';
@@ -25,6 +26,12 @@ function authenticateMaster(req, res) {
 }
 
 export default function handler(req, res) {
+  setCorsHeaders(res);
+  
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  
   // Authenticate master key
   if (!authenticateMaster(req, res)) {
     return;
