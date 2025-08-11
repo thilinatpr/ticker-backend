@@ -15,6 +15,18 @@ const port = process.env.PORT || 3000;
 
 app.use(express.json());
 
+// Import API endpoints for local development
+import healthHandler from './api/health.js';
+import processQueueHandler from './api/process-queue.js';
+import updateTickersHandler from './api/update-tickers.js';
+import jobsHandler from './api/jobs.js';
+
+// Mount API endpoints
+app.all('/api/health', healthHandler);
+app.all('/api/process-queue', processQueueHandler);
+app.all('/api/update-tickers', updateTickersHandler);
+app.all('/api/jobs', jobsHandler);
+
 // Basic route for local testing
 app.get('/', (req, res) => {
   res.json({

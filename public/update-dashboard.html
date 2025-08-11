@@ -745,6 +745,9 @@
                 // Update URL parameters to reflect completion
                 this.updateUrlParams();
                 
+                // Refresh dividend data to show updated results
+                await this.refreshDividendData();
+                
                 // Notify Google Sheets integration if available
                 this.notifyGoogleSheetsCompletion(completedAt);
             }
@@ -753,6 +756,51 @@
                 const url = new URL(window.location);
                 url.searchParams.set('lastUpdated', this.lastUpdated);
                 window.history.replaceState({}, '', url);
+            }
+            
+            async refreshDividendData() {
+                this.log('🔄 Refreshing dividend data to show updates...', 'info');
+                
+                try {
+                    const refreshedData = {};
+                    
+                    // Fetch updated dividend data for each ticker
+                    for (const ticker of this.tickers) {
+                        try {
+                            const response = await fetch(`${this.baseUrl}/api/dividends/${ticker}`, {
+                                headers: { 'X-API-Key': this.apiKey }
+                            });
+                            
+                            if (response.ok) {
+                                const data = await response.json();
+                                refreshedData[ticker] = {
+                                    count: data.totalRecords,
+                                    lastUpdated: data.lastUpdated,
+                                    dataSource: data.dataSource
+                                };
+                                this.log(`📊 ${ticker}: ${data.totalRecords} dividend records`, 'success');
+                            }
+                        } catch (error) {
+                            this.log(`⚠️ Failed to refresh ${ticker}: ${error.message}`, 'error');
+                        }
+                    }
+                    
+                    // Store refreshed data for Google Sheets callback
+                    const refreshMessage = {
+                        type: 'DIVIDEND_DATA_REFRESHED',
+                        timestamp: new Date().toISOString(),
+                        tickers: this.tickers,
+                        dividendData: refreshedData,
+                        successCount: this.successCount,
+                        errorCount: this.errorCount
+                    };
+                    
+                    localStorage.setItem('dividendRefreshResult', JSON.stringify(refreshMessage));
+                    this.log('✅ Data refresh complete - results available for Google Sheets', 'success');
+                    
+                } catch (error) {
+                    this.log(`❌ Data refresh failed: ${error.message}`, 'error');
+                }
             }
             
             notifyGoogleSheetsCompletion(completedAt) {

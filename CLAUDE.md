@@ -2,28 +2,31 @@
 
 ## Project Overview
 
-This is a production-ready Express.js API server deployed on Vercel that provides RESTful endpoints for stock ticker dividend history data with background job processing capabilities.
+This is a production-ready serverless API deployed on Vercel that provides RESTful endpoints for stock ticker dividend history data with comprehensive background job processing capabilities.
 
 - **Purpose:** Serve clean, reliable dividend history data via API with automated background updates
-- **Hosting:** Vercel serverless functions with Supabase database backend
+- **Hosting:** Vercel serverless functions with Supabase PostgreSQL database backend
 - **Language:** JavaScript (Node.js 18+) with ES modules
-- **Framework:** Express.js with middleware optimized for serverless
-- **Data sources:** Polygon API for real-time dividend data, Supabase for persistence
-- **Response format:** JSON with comprehensive error handling and status codes
-- **Current deployment:** https://ticker-backend-fw3jr13tb-thilinas-projects-f6f25033.vercel.app
+- **Framework:** Serverless function architecture optimized for Vercel deployment
+- **Data sources:** Polygon API for real-time dividend data, Supabase for data persistence
+- **Response format:** JSON with comprehensive error handling, CSV support, and HTTP status codes
+- **Current deployment:** Production-ready with enhanced job processing system
 
 ---
 
 ## Project Structure
 
 - `/api` — Vercel serverless function endpoints
-  - `health.js` — Health check endpoint
-  - `dividends/[ticker].js` — Dividend history retrieval
-  - `update-tickers.js` — Background job submission
-  - `jobs.js` — Job listing and management
-  - `job-status/[jobId].js` — Job status monitoring
-  - `process-queue.js` — Background job processor (cron job)
-  - `keys.js` — API key management
+  - `health.js` — Health check endpoint (no auth required)
+  - `dividends/[ticker].js` — Dividend history retrieval with advanced filtering
+  - `update-tickers.js` — Background job submission for bulk ticker updates
+  - `jobs.js` — Job listing and management with filtering/pagination
+  - `job-status/[jobId].js` — Real-time job status monitoring
+  - `process-queue.js` — Background job processor with rate limiting
+  - `process-ticker.js` — Individual ticker processing
+  - `keys.js` — API key management with master key authentication
+  - `debug-env.js` — Environment debugging utilities
+  - `fix-schema.js` — Database schema repair utilities
 - `/lib` — Core business logic
   - `supabase.js` — Database operations
   - `polygon-api.js` — External API integration
@@ -132,7 +135,51 @@ The API includes a sophisticated job processing system:
 - **Rate Limiting:** Respects external API limits (Polygon: 5 requests/minute)
 - **Progress Tracking:** Real-time job status and completion estimates
 - **Error Handling:** Detailed error reporting and partial success handling
-- **Cron Processing:** Daily automated job processing (9 AM UTC)
+- **Cron Processing:** Daily automated job processing (9 AM UTC) via Cloudflare Worker
+
+---
+
+## Cloudflare Worker Integration
+
+The system includes a **Cloudflare Worker** (`ticker-backend-worker2-deployed/`) that provides reliable cron job functionality for scheduled dividend data updates.
+
+### Worker Features:
+- **Daily Cron Jobs:** Scheduled execution at 9:00 AM UTC
+- **Health Monitoring:** API health checks before processing
+- **Queue Processing:** Triggers main API job processing endpoint (`POST /api/process-queue`)
+- **Job Statistics:** Monitors job queue status via `GET /api/jobs`
+- **Error Handling:** Comprehensive logging and retry logic
+- **Cost Effective:** ~90 requests/month (well within Cloudflare's free tier)
+
+### Worker Architecture:
+```
+ticker-backend-worker2-deployed/ (Separate Git Repository)
+├── src/
+│   ├── index.js           # Main worker entry point with cron trigger
+│   └── job-processor.js   # Job processing utilities class
+├── wrangler.toml          # Cloudflare configuration with environment variables
+├── package.json           # Worker dependencies and scripts
+├── deploy.sh              # Deployment automation script
+└── .git/                  # Independent git repository
+```
+
+**Note:** The Cloudflare Worker is maintained as a separate git repository within the `ticker-backend-worker2-deployed/` directory and is excluded from the main project's git tracking to avoid nested repository conflicts.
+
+### Deployment Options:
+1. **Dashboard Deployment:** Copy `src/index.js` to Cloudflare Workers dashboard
+2. **CLI Deployment:** Use `wrangler deploy` with proper authentication
+3. **GitHub Actions:** Automated deployment on push to main branch
+
+### Environment Variables:
+- `TICKER_API_BASE_URL`: Base URL of the ticker backend API
+- `TICKER_API_KEY`: API key for authentication (currently uses demo key)
+
+### Cron Workflow:
+1. **Health Check:** Verifies main API accessibility (`GET /api/health`)
+2. **Process Queue:** Triggers job processing (`POST /api/process-queue`)
+3. **Monitor Stats:** Collects job statistics (`GET /api/jobs`)
+4. **Cleanup:** Monitors old job records for maintenance
+5. **Error Handling:** Logs and handles failures gracefully
 
 ---
 
@@ -141,22 +188,20 @@ The API includes a sophisticated job processing system:
 The `/appscript` folder contains a comprehensive Google Apps Script client with multiple test suites:
 
 ### Files:
-- **`Config.gs`** — Shared configuration and utilities
-- **`SimpleTests.gs`** — Basic test suite for API validation
-- **`QuickStart.gs`** — Quick demonstration functions
-- **`Code.gs`** — Main dividend data functions
-- **`Tests.gs`** — Comprehensive test suite
+- **`DividendDashboard.gs`** — Complete Google Apps Script integration with dashboard trigger functionality
+- **`README.md`** — Setup and configuration instructions
+- **`appsscript.json`** — Apps Script project configuration
 
-### Key Functions:
-- `runAllSimpleTests()` — Complete API test suite (health, dividends, jobs)
-- `addDividendsToSheet()` — Add dividend data directly to Google Sheets
-- `testConnection()` — Quick API connectivity test
-- `getDividendHistory(ticker)` — Fetch dividend data programmatically
+### Key Features:
+- **Dashboard Integration:** Automatic trigger when "UPDATE_DIVIDENDS" is entered in Google Sheets
+- **Bulk Processing:** Handle hundreds of tickers with smart update detection
+- **Error Handling:** Comprehensive retry logic and progress tracking
+- **Real-time Updates:** Live progress monitoring with detailed status reporting
 
 ### Setup:
-1. Copy all `.gs` files to Google Apps Script project
-2. Update `API_BASE_URL` in `Config.gs` if using custom deployment
-3. Run `validateConfig()` to verify setup
+1. Copy `DividendDashboard.gs` to Google Apps Script project
+2. Configure API base URL and authentication
+3. Set up sheet triggers for automatic dashboard launching
 4. Use demo key `tk_demo_key_12345` for testing
 
 ---
@@ -201,10 +246,12 @@ The system includes a sophisticated client-side update dashboard that bypasses s
 &session=1754903025384
 ```
 
-### Multi-User API Keys:
-- **Demo:** `tk_demo_key_12345` (rate limited, testing)
-- **User 1:** `tk_user1_api_key_67890` (production)
-- **User 2:** `tk_user2_api_key_abcde` (production)
+### API Key Management:
+- **Demo Key:** `tk_demo_key_12345` (100 requests/hour, testing only)
+- **Test Key:** `tk_test_67890` (50 requests/hour, development)
+- **Dynamic Keys:** Generate new keys via `/api/keys` endpoint with master key authentication
+- **In-Memory Store:** API keys stored in memory (upgrade to database for production scale)
+- **Rate Limiting:** Per-key rate limiting with sliding window algorithm
 
 ### Client-Side Advantages:
 - **No Execution Limits:** Browser can run for hours
@@ -235,21 +282,24 @@ NODE_ENV=production
 
 ```bash
 # Local development
-npm run dev                    # Start development server
-vercel dev                     # Start Vercel development environment
+npm run dev                    # Start Vercel development server
+npm run build                  # Build for production deployment
+npm start                      # Start production server locally
 
 # Testing and validation
 npm run test:db               # Test database connectivity
 npm run test:endpoints        # Test API endpoints
+npm run test:core             # Test core functions
 npm run validate              # Validate complete setup
 
 # Database setup
-npm run setup:db              # Initialize database schema
-npm run setup:enhanced        # Setup enhanced schema with jobs
+npm run setup:db              # Initialize basic database schema
+npm run setup:enhanced        # Setup enhanced schema with jobs, queues, and rate limiting
 
 # Deployment
 vercel --prod                 # Deploy to production
 vercel env add VAR_NAME       # Add environment variable
+vercel env pull               # Pull environment variables locally
 ```
 
 ---
@@ -257,11 +307,19 @@ vercel env add VAR_NAME       # Add environment variable
 ## Database Schema
 
 ### Core Tables:
-- `tickers` — Stock ticker symbols with metadata
-- `dividend_history` — Historical dividend records
-- `api_jobs` — Background job tracking
-- `job_queue` — Job processing queue
-- `api_keys` — API key management and usage tracking
+- **`tickers`** — Stock ticker symbols with metadata and update tracking
+- **`dividends`** — Historical dividend records with enhanced fields (polygon_id, data_source, cash_amount_usd)
+- **`api_jobs`** — Background job tracking with status, progress, and timing
+- **`job_queue`** — Job processing queue with retry logic and locking
+- **`rate_limits`** — Rate limiting tracking for external API services
+- **`api_call_logs`** — Detailed logging of all API calls for monitoring
+
+### Enhanced Features:
+- **Upsert Support:** Automatic handling of duplicate records
+- **Rate Limit Tracking:** Built-in rate limiting with automatic reset
+- **Job Retry Logic:** Exponential backoff for failed job items
+- **Row Level Security:** Enabled on all tables with authenticated access policies
+- **Performance Indexes:** Optimized queries with strategic database indexes
 
 ### Data Flow:
 1. Client submits ticker update request
@@ -294,36 +352,50 @@ vercel env add VAR_NAME       # Add environment variable
 ## Production Deployment
 
 ### Current Status:
-- **Live URL:** https://ticker-backend-cs2vqvtkl-thilinas-projects-f6f25033.vercel.app
+- **Live URL:** Deployed on Vercel with production configuration
 - **Database:** Supabase (PostgreSQL)
-- **Cron Jobs:** Daily processing at 9 AM UTC
+- **Cron Jobs:** Daily processing at 9 AM UTC via Cloudflare Worker
 - **Rate Limits:** 5 API calls/minute (Polygon), 100 requests/hour (demo key)
 
 ### Deployment Checklist:
 1. ✅ Environment variables configured
-2. ✅ Database schema deployed
+2. ✅ Database schema deployed with enhanced tables
 3. ✅ API endpoints tested and functional
-4. ✅ Cron job scheduled (daily)
+4. ✅ Cloudflare Worker cron job deployed (daily at 9 AM UTC)
 5. ✅ Google Apps Script integration verified
+6. ✅ Rate limiting and job processing system operational
 
 ---
 
 ## Known Limitations
 
-- **Hobby Plan Restrictions:** Cron jobs limited to daily frequency
 - **Rate Limiting:** Polygon API allows 5 calls/minute (free tier)
-- **Data Freshness:** Daily updates only (due to cron limitations)
+- **Data Freshness:** Daily updates via Cloudflare Worker cron schedule
 - **Concurrent Processing:** Single worker instance for job processing
+- **API Key Storage:** In-memory storage (should upgrade to database for production scale)
+- **Worker Dependencies:** Relies on Cloudflare Worker for automated cron execution
 
 ---
 
 ## Coding Guidelines
 
-- Use ES modules (`import`/`export`) consistently
-- Async/await for all database and API operations
-- JSDoc comments for public functions
-- Environment variables for all secrets
-- Comprehensive error handling with meaningful messages
-- Rate limiting respect for external APIs
-- Database transactions for data consistency
+### Code Standards:
+- **ES Modules:** Use `import`/`export` consistently across all files
+- **Async/Await:** All database and API operations use async/await pattern
+- **JSDoc Comments:** Document all public functions with comprehensive JSDoc
+- **Environment Variables:** Store all secrets and configuration in environment variables
+- **Error Handling:** Comprehensive error handling with meaningful messages and proper HTTP status codes
+
+### Security & Performance:
+- **Rate Limiting:** Respect external API limits (Polygon: 5 requests/minute)
+- **Database Transactions:** Use transactions for data consistency when needed
+- **Input Validation:** Validate all input parameters with proper sanitization
+- **CORS Headers:** Proper CORS configuration for cross-origin requests
+- **API Key Authentication:** Secure authentication for all endpoints except health checks
+
+### Architecture Patterns:
+- **Serverless Functions:** Each API endpoint is a separate serverless function
+- **Database Abstraction:** Database operations abstracted in `/lib/supabase.js`
+- **Job Processing:** Background job processing with queue management and retry logic
+- **Middleware Pattern:** Reusable middleware for CORS, authentication, and error handling
 

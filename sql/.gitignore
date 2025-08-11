@@ -1,0 +1,34 @@
+# Database dumps and backups
+*.dump
+*.backup
+*.bak
+*.sql.backup
+*.db
+*.sqlite
+*.sqlite3
+
+# Local development database files
+local.sql
+dev.sql
+test.sql
+
+# Database credentials
+*.env
+.env.*
+secrets.sql
+credentials.sql
+
+# Temporary SQL files
+temp.sql
+tmp.sql
+*.tmp.sql
+
+# Database logs
+*.log
+query.log
+error.log
+
+# IDE database connection files
+.dbconfig
+.database.yml
+database.local.yml

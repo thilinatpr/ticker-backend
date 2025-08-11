@@ -1,0 +1,44 @@
+# Google Apps Script specific files
+.clasp.json
+.claspignore
+
+# Dependencies if any
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+
+# Build outputs
+dist/
+build/
+lib/
+
+# Environment variables
+.env
+.env.local
+.dev.vars
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Backup files
+*.backup
+*.bak
+
+# Temporary files
+tmp/
+temp/
+.tmp/
+
+# Local configuration
+config.local.json
+secrets.json

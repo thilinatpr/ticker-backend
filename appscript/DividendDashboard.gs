@@ -78,8 +78,8 @@ function onOpen() {
  */
 
 // Namespaced configuration to avoid conflicts
-const DIVIDEND_DASHBOARD_URL = 'https://ticker-backend-1uwhvye8v-thilinas-projects-f6f25033.vercel.app/update-dashboard.html';
-const DIVIDEND_API_BASE_URL = 'https://ticker-backend-1uwhvye8v-thilinas-projects-f6f25033.vercel.app/api';
+const DIVIDEND_DASHBOARD_URL = 'https://ticker-backend-fpeil0jjy-thilinas-projects-f6f25033.vercel.app/update-dashboard.html';
+const DIVIDEND_API_BASE_URL = 'https://ticker-backend-fpeil0jjy-thilinas-projects-f6f25033.vercel.app/api';
 const DIVIDEND_API_KEYS = {
   'demo': 'tk_demo_key_12345',
   'user1': 'tk_user1_api_key_67890',
@@ -209,7 +209,7 @@ function DividendDash_checkCompletionStatus() {
 }
 
 /**
- * NAMESPACED: Update sheet with completion data
+ * NAMESPACED: Update sheet with completion data and refresh dividend data
  */
 function DividendDash_updateSheetWithCompletion(completionData) {
   try {
@@ -226,8 +226,84 @@ function DividendDash_updateSheetWithCompletion(completionData) {
     
     console.log(`Sheet updated with completion data: ${completionNote}`);
     
+    // Trigger dividend data refresh after a short delay
+    Utilities.sleep(3000); // Wait 3 seconds for data to be available
+    DividendDash_refreshDividendDataInSheet(completionData.tickers);
+    
   } catch (error) {
     console.log('Error updating sheet with completion data: ' + error.toString());
+  }
+}
+
+/**
+ * NAMESPACED: Refresh dividend data in sheet after updates
+ */
+function DividendDash_refreshDividendDataInSheet(tickers) {
+  try {
+    const sheet = SpreadsheetApp.getActiveSheet();
+    
+    console.log(`Refreshing dividend data for ${tickers.length} tickers...`);
+    
+    // Add dividend count information starting from column C
+    sheet.getRange('C1').setValue('Dividend Count')
+      .setFontWeight('bold')
+      .setBackground('#e8f0fe');
+    
+    for (let i = 0; i < tickers.length; i++) {
+      const ticker = tickers[i];
+      const rowNum = i + 2; // Start from row 2
+      
+      try {
+        // Fetch dividend count for this ticker
+        const response = UrlFetchApp.fetch(`${DIVIDEND_API_BASE_URL}/dividends/${ticker}`, {
+          headers: {
+            'X-API-Key': DividendDash_getUserApiKey(Session.getActiveUser().getEmail())
+          }
+        });
+        
+        if (response.getResponseCode() === 200) {
+          const data = JSON.parse(response.getContentText());
+          sheet.getRange(rowNum, 3).setValue(`${data.totalRecords} records`);
+          console.log(`${ticker}: ${data.totalRecords} dividend records`);
+        } else {
+          sheet.getRange(rowNum, 3).setValue('Error fetching');
+        }
+        
+      } catch (error) {
+        console.log(`Error refreshing ${ticker}: ${error.toString()}`);
+        sheet.getRange(rowNum, 3).setValue('Refresh failed');
+      }
+      
+      // Small delay between API calls
+      Utilities.sleep(500);
+    }
+    
+    console.log('Dividend data refresh completed');
+    
+  } catch (error) {
+    console.log('Error refreshing dividend data: ' + error.toString());
+  }
+}
+
+/**
+ * NAMESPACED: Manual function to refresh dividend data
+ */
+function DividendDash_manualRefreshData() {
+  try {
+    const sheet = SpreadsheetApp.getActiveSheet();
+    const tickers = DividendDash_getTickersFromSheet(sheet);
+    
+    if (tickers.length === 0) {
+      SpreadsheetApp.getUi().alert('No tickers found in sheet.');
+      return;
+    }
+    
+    DividendDash_refreshDividendDataInSheet(tickers);
+    SpreadsheetApp.getUi().alert(`Refreshed dividend data for ${tickers.length} tickers.`);
+    
+  } catch (error) {
+    console.log('Error in manual refresh: ' + error.toString());
+    SpreadsheetApp.getUi().alert('Error refreshing data: ' + error.message);
   }
 }
 

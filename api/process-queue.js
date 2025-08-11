@@ -36,6 +36,15 @@ async function handler(req, res) {
     });
   }
 
+  // Basic environment check
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
+    console.error('Missing required Supabase environment variables');
+    return res.status(500).json({
+      error: 'Configuration error',
+      message: 'Missing required database configuration'
+    });
+  }
+
   const startTime = Date.now();
   let processed = 0;
   let failed = 0;
@@ -46,7 +55,14 @@ async function handler(req, res) {
 
   try {
     // Check if we can make API calls (rate limiting)
-    const waitTime = await getTimeUntilNextCall();
+    let waitTime = 0;
+    try {
+      waitTime = await getTimeUntilNextCall();
+    } catch (rateLimitError) {
+      console.warn(`[${WORKER_ID}] Rate limit check failed, proceeding anyway:`, rateLimitError.message);
+      waitTime = 0; // Allow processing to continue
+    }
+    
     if (waitTime > 0) {
       console.log(`[${WORKER_ID}] Rate limited, waiting ${Math.ceil(waitTime/1000)} seconds`);
       return res.json({
@@ -60,7 +76,19 @@ async function handler(req, res) {
     }
 
     // Get items from queue (limit to 5 to respect rate limits)
-    const queueItems = await getNextQueueItems(5, WORKER_ID);
+    let queueItems = [];
+    try {
+      queueItems = await getNextQueueItems(5, WORKER_ID);
+    } catch (queueError) {
+      console.error(`[${WORKER_ID}] Error getting queue items:`, queueError.message);
+      return res.status(500).json({
+        error: 'Failed to retrieve queue items',
+        message: process.env.NODE_ENV === 'development' ? queueError.message : 'Database error',
+        processed: 0,
+        failed: 0,
+        skipped: 0
+      });
+    }
     
     if (queueItems.length === 0) {
       console.log(`[${WORKER_ID}] No items in queue`);
@@ -255,4 +283,5 @@ async function checkAndCompleteJobs(jobIds) {
   }
 }
 
+// Export handler without authentication requirement for internal cron calls
 export default handler;
