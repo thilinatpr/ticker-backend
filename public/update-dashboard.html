@@ -363,22 +363,29 @@
             initializeFromUrl() {
                 const params = new URLSearchParams(window.location.search);
                 
+                this.log(`Initializing from URL: ${window.location.search}`, 'info');
+                
                 // Parse tickers (JSON array)
                 const tickersParam = params.get('tickers');
+                this.log(`Raw tickers param: ${tickersParam}`, 'info');
+                
                 if (tickersParam) {
                     try {
                         this.tickers = JSON.parse(decodeURIComponent(tickersParam));
+                        this.log(`Parsed tickers: ${JSON.stringify(this.tickers)}`, 'info');
                     } catch (e) {
-                        this.logError('Failed to parse tickers from URL');
+                        this.log(`Failed to parse tickers from URL: ${e.message}`, 'error');
                         this.tickers = [];
                     }
                 }
                 
                 // Get API key (default to demo key)
                 this.apiKey = params.get('apiKey') || 'tk_demo_key_12345';
+                this.log(`Using API key: ${this.maskApiKey(this.apiKey)}`, 'info');
                 
                 // Get last updated timestamp
                 this.lastUpdated = params.get('lastUpdated');
+                this.log(`Last updated: ${this.lastUpdated || 'None'}`, 'info');
                 
                 this.updateDisplay();
                 this.analyzeUpdateStrategy();
@@ -500,8 +507,14 @@
             }
             
             async startUpdate() {
+                this.log(`🎯 startUpdate() called`, 'info');
+                this.log(`Tickers available: ${this.tickers.length}`, 'info');
+                this.log(`API key: ${this.maskApiKey(this.apiKey)}`, 'info');
+                this.log(`Base URL: ${this.baseUrl}`, 'info');
+                
                 if (this.tickers.length === 0) {
                     this.showError('No tickers to update');
+                    this.log(`❌ No tickers available for update`, 'error');
                     return;
                 }
                 
@@ -821,10 +834,18 @@
         let updater;
         
         function startUpdate() {
-            if (updater.isPaused) {
+            console.log('🔘 Global startUpdate() function called');
+            console.log('Updater instance:', updater);
+            console.log('Is paused:', updater?.isPaused);
+            
+            if (updater && updater.isPaused) {
+                console.log('Resuming update...');
                 updater.resumeUpdate();
-            } else {
+            } else if (updater) {
+                console.log('Starting new update...');
                 updater.startUpdate();
+            } else {
+                console.error('❌ Updater instance not found!');
             }
         }
         
@@ -842,7 +863,13 @@
         
         // Initialize when page loads
         document.addEventListener('DOMContentLoaded', () => {
-            updater = new DividendUpdater();
+            console.log('🚀 DOM loaded, initializing DividendUpdater...');
+            try {
+                updater = new DividendUpdater();
+                console.log('✅ DividendUpdater initialized:', updater);
+            } catch (error) {
+                console.error('❌ Failed to initialize DividendUpdater:', error);
+            }
         });
     </script>
 </body>
