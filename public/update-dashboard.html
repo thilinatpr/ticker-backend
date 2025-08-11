@@ -322,6 +322,9 @@
                 <button class="btn btn-secondary" onclick="clearLogs()">
                     🗑️ Clear Logs
                 </button>
+                <button class="btn btn-secondary" onclick="resetDashboard()">
+                    🔄 Reset Dashboard
+                </button>
             </div>
             
             <!-- Status Messages -->
@@ -508,6 +511,7 @@
             
             async startUpdate() {
                 this.log(`🎯 startUpdate() called`, 'info');
+                console.trace('startUpdate() call stack'); // Debug trace
                 this.log(`Tickers available: ${this.tickers.length}`, 'info');
                 this.log(`API key: ${this.maskApiKey(this.apiKey)}`, 'info');
                 this.log(`Base URL: ${this.baseUrl}`, 'info');
@@ -838,14 +842,20 @@
             console.log('Updater instance:', updater);
             console.log('Is paused:', updater?.isPaused);
             
-            if (updater && updater.isPaused) {
-                console.log('Resuming update...');
-                updater.resumeUpdate();
-            } else if (updater) {
-                console.log('Starting new update...');
-                updater.startUpdate();
-            } else {
-                console.error('❌ Updater instance not found!');
+            try {
+                if (updater && updater.isPaused) {
+                    console.log('Resuming update...');
+                    updater.resumeUpdate();
+                } else if (updater) {
+                    console.log('Starting new update...');
+                    updater.startUpdate().catch(error => {
+                        console.error('❌ startUpdate failed:', error);
+                    });
+                } else {
+                    console.error('❌ Updater instance not found!');
+                }
+            } catch (error) {
+                console.error('❌ Error in global startUpdate:', error);
             }
         }
         
@@ -859,6 +869,32 @@
         
         function clearLogs() {
             updater.clearLogs();
+        }
+        
+        function resetDashboard() {
+            console.log('🔄 Resetting dashboard...');
+            try {
+                if (updater) {
+                    updater.isRunning = false;
+                    updater.isPaused = false;
+                    updater.jobId = null;
+                    updater.currentIndex = 0;
+                    updater.successCount = 0;
+                    updater.errorCount = 0;
+                    updater.startTime = null;
+                    
+                    // Reset UI
+                    document.getElementById('startBtn').disabled = false;
+                    document.getElementById('pauseBtn').disabled = true;
+                    document.getElementById('stopBtn').disabled = true;
+                    document.getElementById('startBtn').textContent = '🚀 Start Update';
+                    
+                    updater.updateDisplay();
+                    updater.log('🔄 Dashboard reset successfully', 'info');
+                }
+            } catch (error) {
+                console.error('❌ Reset failed:', error);
+            }
         }
         
         // Initialize when page loads
