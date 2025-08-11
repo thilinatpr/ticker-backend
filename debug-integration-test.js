@@ -5,11 +5,11 @@
  * Tests the corrected data flow from Google Sheets → Dashboard → API → Database
  */
 
-import fetch from 'node-fetch';
+// Using native fetch (Node 18+)
 
 const BASE_URL = process.env.VERCEL_URL 
   ? `https://${process.env.VERCEL_URL}` 
-  : 'https://ticker-backend-fw3jr13tb-thilinas-projects-f6f25033.vercel.app';
+  : 'https://ticker-backend-nyykw3inh-thilinas-projects-f6f25033.vercel.app';
 
 const API_KEY = 'tk_demo_key_12345';
 

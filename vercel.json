@@ -1,11 +1,5 @@
 {
   "version": 2,
-  "crons": [
-    {
-      "path": "/api/process-queue",
-      "schedule": "0 9 * * *"
-    }
-  ],
   "rewrites": [
     {
       "source": "/update-dashboard.html",

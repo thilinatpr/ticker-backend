@@ -534,46 +534,77 @@
                 document.getElementById('stopBtn').disabled = false;
                 
                 this.log(`🚀 Starting update for ${this.tickers.length} tickers`, 'success');
-                this.log(`Using job-based processing via /api/update-tickers`, 'info');
+                this.log(`Using direct processing (no job queue)`, 'info');
                 
-                await this.submitBulkUpdateJob();
+                await this.processTickersDirectly();
             }
             
-            async submitBulkUpdateJob() {
+            async processTickersDirectly() {
                 try {
-                    this.log('Submitting bulk update job to backend...', 'info');
+                    this.log('Processing tickers directly (no job queue)...', 'info');
                     
-                    const response = await fetch(`${this.baseUrl}/api/update-tickers`, {
-                        method: 'POST',
-                        headers: {
-                            'X-API-Key': this.apiKey,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            tickers: this.tickers,
-                            priority: 1,
-                            force: true
-                        })
-                    });
-                    
-                    if (!response.ok) {
-                        const error = await response.json();
-                        throw new Error(error.error || `HTTP ${response.status}`);
+                    // Process each ticker sequentially to respect rate limits
+                    for (let i = 0; i < this.tickers.length && this.isRunning; i++) {
+                        if (this.isPaused) {
+                            this.log('⏸️ Update paused', 'info');
+                            return;
+                        }
+                        
+                        const ticker = this.tickers[i];
+                        this.currentIndex = i;
+                        
+                        this.log(`Processing ${ticker} (${i + 1}/${this.tickers.length})...`, 'info');
+                        
+                        try {
+                            const response = await fetch(`${this.baseUrl}/api/process-ticker`, {
+                                method: 'POST',
+                                headers: {
+                                    'X-API-Key': this.apiKey,
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    ticker: ticker,
+                                    force: true
+                                })
+                            });
+                            
+                            const result = await response.json();
+                            
+                            if (response.ok && result.success) {
+                                this.successCount++;
+                                if (result.action === 'processed') {
+                                    this.log(`✅ ${ticker}: ${result.dividends.found} dividends found, ${result.dividends.stored} stored`, 'success');
+                                } else {
+                                    this.log(`⏭️ ${ticker}: ${result.reason}`, 'info');
+                                }
+                            } else {
+                                this.errorCount++;
+                                this.log(`❌ ${ticker}: ${result.error || 'Processing failed'}`, 'error');
+                            }
+                            
+                        } catch (error) {
+                            this.errorCount++;
+                            this.log(`❌ ${ticker}: ${error.message}`, 'error');
+                        }
+                        
+                        this.updateProgress();
+                        this.updateDisplay();
+                        
+                        // Rate limiting delay between requests (except for last)
+                        if (i < this.tickers.length - 1 && this.isRunning) {
+                            this.log(`⏳ Waiting ${this.RATE_LIMIT_DELAY/1000}s (rate limit)...`, 'info');
+                            await this.delay(this.RATE_LIMIT_DELAY);
+                        }
                     }
                     
-                    const jobData = await response.json();
-                    this.jobId = jobData.jobId;
-                    
-                    this.log(`✅ Job ${this.jobId} created successfully`, 'success');
-                    this.log(`Status URL: ${jobData.statusUrl}`, 'info');
-                    
-                    // Start polling job status
-                    await this.pollJobStatus();
+                    if (this.isRunning) {
+                        this.completeUpdate();
+                    }
                     
                 } catch (error) {
                     this.errorCount = this.tickers.length;
-                    this.log(`❌ Failed to submit job: ${error.message}`, 'error');
-                    this.showError(`Failed to submit update job: ${error.message}`);
+                    this.log(`❌ Direct processing failed: ${error.message}`, 'error');
+                    this.showError(`Failed to process tickers: ${error.message}`);
                     this.stopUpdate();
                 }
             }
@@ -896,6 +927,7 @@
                 console.error('❌ Reset failed:', error);
             }
         }
+        
         
         // Initialize when page loads
         document.addEventListener('DOMContentLoaded', () => {
