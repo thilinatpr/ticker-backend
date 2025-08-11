@@ -78,8 +78,8 @@ function onOpen() {
  */
 
 // Namespaced configuration to avoid conflicts
-const DIVIDEND_DASHBOARD_URL = 'https://ticker-backend-87zsa6xgr-thilinas-projects-f6f25033.vercel.app/update-dashboard.html';
-const DIVIDEND_API_BASE_URL = 'https://ticker-backend-87zsa6xgr-thilinas-projects-f6f25033.vercel.app/api';
+const DIVIDEND_DASHBOARD_URL = 'https://ticker-backend-1uwhvye8v-thilinas-projects-f6f25033.vercel.app/update-dashboard.html';
+const DIVIDEND_API_BASE_URL = 'https://ticker-backend-1uwhvye8v-thilinas-projects-f6f25033.vercel.app/api';
 const DIVIDEND_API_KEYS = {
   'demo': 'tk_demo_key_12345',
   'user1': 'tk_user1_api_key_67890',
