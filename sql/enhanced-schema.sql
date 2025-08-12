@@ -22,7 +22,7 @@ BEGIN
     -- Add polygon_id column if it doesn't exist
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
                    WHERE table_name = 'dividends' AND column_name = 'polygon_id') THEN
-        ALTER TABLE dividends ADD COLUMN polygon_id VARCHAR(50);
+        ALTER TABLE dividends ADD COLUMN polygon_id VARCHAR(100);
     END IF;
     
     -- Add data_source column if it doesn't exist  

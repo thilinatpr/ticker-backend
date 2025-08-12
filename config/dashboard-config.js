@@ -4,14 +4,18 @@
  */
 
 export const DASHBOARD_CONFIG = {
-  // Base URLs - update these for your deployment
-  API_BASE_URL: process.env.VERCEL_URL 
-    ? `https://${process.env.VERCEL_URL}/api` 
-    : 'http://localhost:3000/api',
+  // Base URLs - uses permanent URL or falls back to Vercel auto-generated URL
+  API_BASE_URL: process.env.CUSTOM_BASE_URL 
+    ? `${process.env.CUSTOM_BASE_URL}/api`
+    : process.env.VERCEL_URL 
+      ? `https://${process.env.VERCEL_URL}/api` 
+      : 'http://localhost:3000/api',
     
-  DASHBOARD_URL: process.env.VERCEL_URL 
-    ? `https://${process.env.VERCEL_URL}/update-dashboard.html` 
-    : 'http://localhost:3000/update-dashboard.html',
+  DASHBOARD_URL: process.env.CUSTOM_BASE_URL 
+    ? `${process.env.CUSTOM_BASE_URL}/update-dashboard.html`
+    : process.env.VERCEL_URL 
+      ? `https://${process.env.VERCEL_URL}/update-dashboard.html` 
+      : 'http://localhost:3000/update-dashboard.html',
 
   // Rate limiting settings
   RATE_LIMIT: {
@@ -114,7 +118,6 @@ export function estimateUpdateDuration(tickerCount) {
  * Get date range for updates
  */
 export function getUpdateDateRange(lastUpdated = null) {
-  const now = new Date();
   
   if (!lastUpdated) {
     // Full historical update

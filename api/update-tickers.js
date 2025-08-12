@@ -59,15 +59,12 @@ async function handler(req, res) {
   }
 
   try {
-    // 1. Upsert tickers to database
-    console.log(`Upserting ${validTickers.length} tickers...`);
-    await upsertTickers(validTickers);
-
-    // 2. Intelligent routing: Queue vs Traditional Processing
+    // 1. Intelligent routing: Check BEFORE modifying database
     const newTickers = [];
     const existingTickers = [];
     const queueDecisions = [];
 
+    console.log(`Checking queue routing for ${validTickers.length} tickers...`);
     for (const ticker of validTickers) {
       const decision = await shouldUseQueue(ticker);
       queueDecisions.push({ ticker, ...decision });
@@ -78,6 +75,10 @@ async function handler(req, res) {
         existingTickers.push(ticker);
       }
     }
+
+    // 2. Upsert tickers to database AFTER routing decisions
+    console.log(`Upserting ${validTickers.length} tickers...`);
+    await upsertTickers(validTickers);
 
     console.log(`Routing: ${newTickers.length} new tickers to CF Queue, ${existingTickers.length} existing to traditional queue`);
 
