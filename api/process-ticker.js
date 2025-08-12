@@ -29,12 +29,15 @@ async function handler(req, res) {
     });
   }
 
-  const { ticker, force = false } = req.body;
+  const ticker = req.query.ticker || req.body?.ticker;
+  const force = req.query.force === 'true' || req.body?.force === true;
+  const fetchType = req.query.fetchType || req.body?.fetchType || 'historical';
+  const requestId = req.headers['x-request-id'] || 'manual';
 
   if (!ticker) {
     return res.status(400).json({
       error: 'Ticker symbol is required',
-      example: { ticker: 'AAPL', force: false }
+      example: { ticker: 'AAPL', force: false, fetchType: 'historical' }
     });
   }
 
@@ -42,26 +45,33 @@ async function handler(req, res) {
   const startTime = Date.now();
 
   try {
-    console.log(`Processing ${tickerUpper} directly (force: ${force})`);
+    console.log(`Processing ${tickerUpper} (${fetchType}) directly (force: ${force}) [${requestId}]`);
 
-    // Check if ticker needs update (unless forced)
-    if (!force) {
-      const needsUpdate = await needsDividendUpdate(tickerUpper, force);
-      if (!needsUpdate) {
-        console.log(`${tickerUpper} doesn't need update, skipping`);
-        return res.status(200).json({
-          success: true,
-          ticker: tickerUpper,
-          action: 'skipped',
-          reason: 'Recent data available',
-          processingTime: Date.now() - startTime
-        });
-      }
+    // For queue-triggered historical fetches, always process
+    let shouldProcess = force || fetchType === 'historical';
+    
+    if (!shouldProcess) {
+      // Check if ticker needs update for regular processing
+      const updateCheck = await needsDividendUpdate(tickerUpper, force);
+      shouldProcess = updateCheck.needsUpdate || updateCheck.needsUpdate === true;
+    }
+    
+    if (!shouldProcess) {
+      console.log(`${tickerUpper} doesn't need update, skipping`);
+      return res.status(200).json({
+        success: true,
+        ticker: tickerUpper,
+        action: 'skipped',
+        reason: 'Recent data available',
+        fetchType,
+        requestId,
+        processingTime: Date.now() - startTime
+      });
     }
 
-    // Fetch dividend data from Polygon API
-    console.log(`Fetching dividend data for ${tickerUpper}...`);
-    const dividends = await fetchPolygonDividends(tickerUpper);
+    // Fetch dividend data from Polygon API with appropriate fetch type
+    console.log(`Fetching ${fetchType} dividend data for ${tickerUpper}...`);
+    const dividends = await fetchPolygonDividends(tickerUpper, fetchType);
 
     console.log(`Found ${dividends.length} dividend records for ${tickerUpper}`);
 
@@ -72,22 +82,24 @@ async function handler(req, res) {
       storeResult = await storeDividendHistory(tickerUpper, dividends);
     }
 
-    // Update ticker timestamp
-    await updateTickerTimestamp(tickerUpper);
+    // Update ticker timestamp with fetch type
+    await updateTickerTimestamp(tickerUpper, fetchType);
 
     const processingTime = Date.now() - startTime;
     
-    console.log(`Successfully processed ${tickerUpper} in ${processingTime}ms`);
+    console.log(`✓ Successfully processed ${tickerUpper} (${fetchType}) in ${processingTime}ms`);
 
     res.status(200).json({
       success: true,
       ticker: tickerUpper,
       action: 'processed',
+      fetchType,
       dividends: {
         found: dividends.length,
         stored: storeResult.inserted,
         errors: storeResult.errors
       },
+      requestId,
       processingTime,
       apiKeyName: req.apiKeyData?.name || 'Unknown'
     });
@@ -100,7 +112,9 @@ async function handler(req, res) {
       success: false,
       ticker: tickerUpper,
       action: 'failed',
+      fetchType,
       error: error.message,
+      requestId,
       processingTime,
       apiKeyName: req.apiKeyData?.name || 'Unknown'
     });

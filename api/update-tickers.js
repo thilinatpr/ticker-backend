@@ -13,6 +13,7 @@ import {
   addTickersToQueue,
   getJobById 
 } from '../lib/job-manager.js';
+import { sendTickerToQueue, shouldUseQueue } from '../lib/cloudflare-queue.js';
 
 async function handler(req, res) {
   setCorsHeaders(res);
@@ -62,36 +63,93 @@ async function handler(req, res) {
     console.log(`Upserting ${validTickers.length} tickers...`);
     await upsertTickers(validTickers);
 
-    // 2. Create background job for dividend updates
-    console.log('Creating dividend update job...');
-    const jobId = await createDividendUpdateJob(validTickers, priority, force);
+    // 2. Intelligent routing: Queue vs Traditional Processing
+    const newTickers = [];
+    const existingTickers = [];
+    const queueDecisions = [];
 
-    // 3. Add tickers to processing queue
-    console.log(`Adding ${validTickers.length} tickers to job queue...`);
-    await addTickersToQueue(jobId, validTickers, priority);
+    for (const ticker of validTickers) {
+      const decision = await shouldUseQueue(ticker);
+      queueDecisions.push({ ticker, ...decision });
+      
+      if (decision.useQueue) {
+        newTickers.push(ticker);
+      } else {
+        existingTickers.push(ticker);
+      }
+    }
 
-    // 4. Get job details for response
-    const job = await getJobById(jobId);
+    console.log(`Routing: ${newTickers.length} new tickers to CF Queue, ${existingTickers.length} existing to traditional queue`);
 
-    console.log(`Ticker update job ${jobId} initiated successfully`);
+    let queueResult = null;
+    let jobId = null;
+    
+    // 3a. Send new tickers to Cloudflare Queue for instant processing
+    if (newTickers.length > 0) {
+      console.log(`Sending ${newTickers.length} new tickers to Cloudflare Queue...`);
+      const queueSuccess = await sendTickerToQueue(newTickers, 'high', force);
+      
+      if (!queueSuccess) {
+        console.log('CF Queue failed, falling back to traditional processing for new tickers');
+        existingTickers.push(...newTickers);
+        newTickers.length = 0;
+      } else {
+        queueResult = {
+          tickers: newTickers,
+          status: 'sent_to_queue',
+          message: 'New tickers sent to Cloudflare Queue for instant processing'
+        };
+      }
+    }
 
-    res.status(202).json({
+    // 3b. Create traditional background job for existing tickers
+    if (existingTickers.length > 0) {
+      console.log('Creating traditional dividend update job...');
+      jobId = await createDividendUpdateJob(existingTickers, priority, force);
+      
+      console.log(`Adding ${existingTickers.length} tickers to job queue...`);
+      await addTickersToQueue(jobId, existingTickers, priority);
+    }
+
+    // 4. Prepare response
+    const response = {
       success: true,
-      jobId: jobId,
-      message: `Ticker update initiated for ${validTickers.length} symbols. Dividend data will be processed in background.`,
-      job: {
+      message: `Ticker update initiated for ${validTickers.length} symbols`,
+      processing: {
+        newTickers: newTickers.length,
+        existingTickers: existingTickers.length,
+        queueProcessing: queueResult ? newTickers.length : 0,
+        traditionalProcessing: existingTickers.length
+      },
+      tickers: validTickers,
+      queueDecisions,
+      apiKeyName: req.apiKeyData?.name || 'Unknown'
+    };
+
+    // Add job details if traditional processing is used
+    if (jobId) {
+      const job = await getJobById(jobId);
+      response.job = {
         id: job.id,
         status: job.status,
         totalTickers: job.total_tickers,
         processedTickers: job.processed_tickers,
         createdAt: job.created_at,
         estimatedCompletion: job.estimated_completion
-      },
-      tickers: validTickers,
-      queuePosition: `Processing will begin within 1-2 minutes`,
-      statusUrl: `/api/job-status/${jobId}`,
-      apiKeyName: req.apiKeyData?.name || 'Unknown'
-    });
+      };
+      response.jobId = jobId;
+      response.statusUrl = `/api/job-status/${jobId}`;
+    }
+
+    // Add queue details if CF Queue is used
+    if (queueResult) {
+      response.queueResult = queueResult;
+      response.message += '. New tickers are being processed instantly via Cloudflare Queue.';
+    }
+
+    console.log(`Hybrid ticker update initiated: ${newTickers.length} via queue, ${existingTickers.length} via jobs`);
+
+    res.status(202).json(response);
     
   } catch (error) {
     console.error('Error creating ticker update job:', error);
