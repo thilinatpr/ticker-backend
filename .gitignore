@@ -34,7 +34,6 @@ out/
 .cache/
 .parcel-cache/
 .serverless/
-.github/
 
 # IDE and Editors
 .vscode/
@@ -111,10 +110,8 @@ appscript/dist/
 # Supabase
 .supabase/
 
-# Nested Git Repositories
+# Cloudflare Worker (separate git repository)
 ticker-backend-worker2-deployed/
-worker*/
-*-worker/
 
 # Docker
 .dockerignore
