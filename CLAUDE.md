@@ -399,3 +399,9 @@ vercel env pull               # Pull environment variables locally
 - **Job Processing:** Background job processing with queue management and retry logic
 - **Middleware Pattern:** Reusable middleware for CORS, authentication, and error handling
 
+### FINHUB CONFIG
+Webhook
+URL:
+Secret:cv89v6hr01qqdqh4ntlg
+
+All requests' header made from our server will contain field "X-Finnhub-Secret": "cv89v6hr01qqdqh4ntlg" for authentication. To acknowledge receipt of an event, your endpoint must return a 2xx HTTP status code. Acknowledge events prior to any logic that needs to take place to prevent timeouts. Your endpoint is disabled if it fails to acknowledge events over consecutive days.
