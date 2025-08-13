@@ -13,7 +13,7 @@ import {
   addTickersToQueue,
   getJobById 
 } from '../lib/job-manager.js';
-import { sendTickerToQueue, shouldUseQueue } from '../lib/cloudflare-queue.js';
+import { sendTickerToNativeQueue, shouldUseNativeQueue } from '../lib/cloudflare-native-queue.js';
 
 async function handler(req, res) {
   setCorsHeaders(res);
@@ -59,14 +59,36 @@ async function handler(req, res) {
   }
 
   try {
+    // Stage 3: Fast response optimization
+    const fastMode = req.query.fast === 'true' || validTickers.length > 20;
+    
+    if (fastMode) {
+      // Immediate response for large batches to avoid timeouts
+      const processingId = `proc_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+      
+      res.status(202).json({
+        success: true,
+        message: `Fast processing initiated for ${validTickers.length} symbols`,
+        processingId,
+        tickers: validTickers,
+        mode: 'Stage 3 - Fast Response',
+        statusUrl: `/api/job-status/${processingId}`,
+        note: 'Processing continues in background. Large batches use fast mode automatically.'
+      });
+      
+      // Continue processing asynchronously
+      processTickersAsync(validTickers, priority, force, processingId, req.apiKeyData?.name);
+      return;
+    }
+
     // 1. Intelligent routing: Check BEFORE modifying database
     const newTickers = [];
     const existingTickers = [];
     const queueDecisions = [];
 
-    console.log(`Checking queue routing for ${validTickers.length} tickers...`);
+    console.log(`Checking native queue routing for ${validTickers.length} tickers...`);
     for (const ticker of validTickers) {
-      const decision = await shouldUseQueue(ticker);
+      const decision = await shouldUseNativeQueue(ticker);
       queueDecisions.push({ ticker, ...decision });
       
       if (decision.useQueue) {
@@ -85,20 +107,21 @@ async function handler(req, res) {
     let queueResult = null;
     let jobId = null;
     
-    // 3a. Send new tickers to Cloudflare Queue for instant processing
+    // 3a. Send new tickers to Native Cloudflare Queue for instant processing
     if (newTickers.length > 0) {
-      console.log(`Sending ${newTickers.length} new tickers to Cloudflare Queue...`);
-      const queueSuccess = await sendTickerToQueue(newTickers, 'high', force);
+      console.log(`Sending ${newTickers.length} new tickers to Native Cloudflare Queue...`);
+      const queueResult_Response = await sendTickerToNativeQueue(newTickers, 'high', force);
       
-      if (!queueSuccess) {
-        console.log('CF Queue failed, falling back to traditional processing for new tickers');
+      if (!queueResult_Response.success) {
+        console.log('Native CF Queue failed, falling back to traditional processing for new tickers');
         existingTickers.push(...newTickers);
         newTickers.length = 0;
       } else {
         queueResult = {
           tickers: newTickers,
-          status: 'sent_to_queue',
-          message: 'New tickers sent to Cloudflare Queue for instant processing'
+          status: queueResult_Response.status,
+          method: queueResult_Response.method,
+          message: queueResult_Response.message
         };
       }
     }
@@ -145,7 +168,7 @@ async function handler(req, res) {
     // Add queue details if CF Queue is used
     if (queueResult) {
       response.queueResult = queueResult;
-      response.message += '. New tickers are being processed instantly via Cloudflare Queue.';
+      response.message += '. New tickers are being processed instantly via Native Cloudflare Queue.';
     }
 
     console.log(`Hybrid ticker update initiated: ${newTickers.length} via queue, ${existingTickers.length} via jobs`);
@@ -160,6 +183,59 @@ async function handler(req, res) {
       message: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error',
       jobId: null
     });
+  }
+}
+
+/**
+ * Stage 3: Async processing function for fast mode
+ * Processes tickers without blocking HTTP response
+ */
+async function processTickersAsync(validTickers, priority, force, processingId, apiKeyName) {
+  try {
+    console.log(`[${processingId}] Starting async processing for ${validTickers.length} tickers`);
+    
+    // Intelligent routing
+    const newTickers = [];
+    const existingTickers = [];
+    
+    for (const ticker of validTickers) {
+      try {
+        const decision = await shouldUseNativeQueue(ticker);
+        if (decision.useQueue) {
+          newTickers.push(ticker);
+        } else {
+          existingTickers.push(ticker);
+        }
+      } catch (error) {
+        console.error(`[${processingId}] Error checking ${ticker}:`, error.message);
+        existingTickers.push(ticker);
+      }
+    }
+
+    // Upsert tickers
+    await upsertTickers(validTickers);
+
+    // Process via appropriate queues
+    let jobId = null;
+    if (newTickers.length > 0) {
+      try {
+        await sendTickerToNativeQueue(newTickers, 'high', force);
+        console.log(`[${processingId}] Native queue: ${newTickers.length} tickers`);
+      } catch (error) {
+        existingTickers.push(...newTickers);
+      }
+    }
+
+    if (existingTickers.length > 0) {
+      jobId = await createDividendUpdateJob(existingTickers, priority, force);
+      await addTickersToQueue(jobId, existingTickers, priority);
+      console.log(`[${processingId}] Traditional job: ${jobId}`);
+    }
+
+    console.log(`[${processingId}] Async processing completed`);
+    
+  } catch (error) {
+    console.error(`[${processingId}] Async processing failed:`, error);
   }
 }
 

@@ -71,7 +71,7 @@ async function handler(req, res) {
 
     // Fetch dividend data from Polygon API with appropriate fetch type
     console.log(`Fetching ${fetchType} dividend data for ${tickerUpper}...`);
-    const dividends = await fetchPolygonDividends(tickerUpper, fetchType);
+    const dividends = await fetchPolygonDividends(tickerUpper);
 
     console.log(`Found ${dividends.length} dividend records for ${tickerUpper}`);
 

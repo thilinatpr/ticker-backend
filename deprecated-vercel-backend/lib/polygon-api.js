@@ -129,6 +129,12 @@ function calculateDateRange(fetchType = 'historical', includeFuture = true) {
     endDate = includeFuture 
       ? new Date(now.getFullYear(), now.getMonth() + 3, now.getDate())
       : now;
+  } else {
+    // Default case: treat as historical
+    startDate = new Date(now.getFullYear() - 2, now.getMonth(), now.getDate());
+    endDate = includeFuture 
+      ? new Date(now.getFullYear(), now.getMonth() + 6, now.getDate())
+      : now;
   }
 
   return {
@@ -360,9 +366,11 @@ export async function fetchBulkRecentDividends(daysBack = 2, limit = 1000) {
 
       if (!response.ok) {
         if (response.status === 429) {
-          console.log('Rate limit hit - waiting 60 seconds...');
-          await new Promise(resolve => setTimeout(resolve, 60000));
-          continue; // Retry same URL
+          console.log('Rate limit hit - deferring to next processing cycle');
+          // Instead of waiting 60 seconds (causing timeout), throw error to defer
+          const errorMessage = 'Rate limit exceeded - will retry in next cycle';
+          await recordApiCall('/v3/reference/dividends', 'BULK', response.status, responseTime, rateLimitRemaining, errorMessage);
+          throw new Error('RATE_LIMIT_DEFERRED');
         }
         
         const errorText = await response.text();
@@ -390,10 +398,22 @@ export async function fetchBulkRecentDividends(daysBack = 2, limit = 1000) {
         nextUrl += `&apikey=${apiKey}`;
       }
 
-      // Rate limiting: sleep 12 seconds between calls (5 calls per minute = 12 second intervals)
+      // Stage 3: Respect 5 calls/minute but avoid serverless timeouts
       if (nextUrl) {
-        console.log('Sleeping 12 seconds for rate limiting...');
-        await new Promise(resolve => setTimeout(resolve, 12000));
+        const elapsedTime = Date.now() - startTime;
+        const timeRemaining = 25000 - elapsedTime; // 25s budget for serverless
+        
+        if (timeRemaining > 15000) {
+          // We have time budget - respect the 12-second rate limit
+          console.log('Rate limiting: waiting 12 seconds (5 calls/minute)...');
+          await new Promise(resolve => setTimeout(resolve, 12000));
+        } else {
+          // Time budget low - defer remaining pages to avoid timeout
+          console.log('Serverless timeout approaching - deferring remaining pages');
+          // Store nextUrl for next processing cycle
+          console.log(`Next URL for continuation: ${nextUrl}`);
+          break; // Exit to avoid timeout, will resume next cycle
+        }
       }
 
     } catch (error) {

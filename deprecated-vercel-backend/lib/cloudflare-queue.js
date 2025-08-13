@@ -50,7 +50,7 @@ export async function sendTickerToQueue(tickers, priority = 'normal', force = fa
             'User-Agent': 'ticker-backend/1.0'
           },
           body: JSON.stringify(queueMessage),
-          timeout: 10000 // 10 second timeout
+          timeout: 15000 // 15 second timeout
         });
 
         if (response.ok) {

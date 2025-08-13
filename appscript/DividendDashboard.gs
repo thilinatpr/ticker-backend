@@ -78,8 +78,9 @@ function onOpen() {
  */
 
 // Namespaced configuration to avoid conflicts
-const DIVIDEND_DASHBOARD_URL = 'https://ticker-backend-fpeil0jjy-thilinas-projects-f6f25033.vercel.app/update-dashboard.html';
-const DIVIDEND_API_BASE_URL = 'https://ticker-backend-fpeil0jjy-thilinas-projects-f6f25033.vercel.app/api';
+// Stage 4: CF-Native endpoints (no Vercel dependency)
+const DIVIDEND_API_BASE_URL = 'https://ticker-backend-worker2.patprathnayaka.workers.dev';
+const DIVIDEND_DASHBOARD_URL = DIVIDEND_API_BASE_URL + '/dashboard'; // Future CF-native dashboard
 const DIVIDEND_API_KEYS = {
   'demo': 'tk_demo_key_12345',
   'user1': 'tk_user1_api_key_67890',
@@ -255,11 +256,8 @@ function DividendDash_refreshDividendDataInSheet(tickers) {
       
       try {
         // Fetch dividend count for this ticker
-        const response = UrlFetchApp.fetch(`${DIVIDEND_API_BASE_URL}/dividends/${ticker}`, {
-          headers: {
-            'X-API-Key': DividendDash_getUserApiKey(Session.getActiveUser().getEmail())
-          }
-        });
+        // Stage 4: CF-Native endpoint (no API key required)
+        const response = UrlFetchApp.fetch(`${DIVIDEND_API_BASE_URL}/dividends/${ticker}`);
         
         if (response.getResponseCode() === 200) {
           const data = JSON.parse(response.getContentText());
